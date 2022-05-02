@@ -96,49 +96,6 @@ def save_corner_points(corner_points):
     arr = [[0] * cols] * rows
 
     array_int = np.array(corner_points).astype(int)
-    #print("array int", array_int)
-    #
-    # print("corner points", corner_points)
-    # print("index 0", array_int[0]) # index 0 of corner points
-    # print("index 0, 0?", array_int[0][0]) # index 0 of corner points
-    #
-    # arr[0][0] = array_int[0]
-    # print((arr[0][0])[0])
-    # np.array(arr)
-    #
-    # for index in array_int:
-    # arr[0][0] = array_int[0]
-    # arr[0][1] = array_int[1]
-    # arr[0][2] = array_int[2]
-    # arr[0][3] = array_int[3]
-    # arr[0][4] = array_int[4]
-    # arr[0][5] = array_int[5]
-    # arr[0][6] = array_int[6]
-    # arr[0][7] = array_int[7]
-    # arr[0][8] = array_int[8]
-    # arr[1][0] = array_int[9]
-    i = 0
-    for j in range(0, 9):
-        for z in range(81):
-            arr[i][j] = array_int[z]
-            print(arr[i][j])
-
-
-    # accessing index 0 of arr[0][0]
-    # arr[0][1] = [121.22601   44.00001 ] = corner_points[1]
-    # arr[0][2] = [168.92873   44.00001 ] = corner_points[]
-    # for index in corner_points:
-    #     for i in arr:
-    #         for j in arr:
-    #             arr[i][j] = corner_points[index]
-
-    # reshaped = np.reshape(corner_points,(18,18))
-    # print(reshaped)
-
-    # for x in rows:
-    #     for y in cols:
-    #         arr[x][y] = corner_points([x, y])
-
 
 
 # Select the live video stream source (0-webcam & 1-GoPro)
