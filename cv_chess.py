@@ -1,6 +1,9 @@
 import re
+import time
+
 import cv2
 import numpy as np
+import chess
 from cv_chess_functions import (read_img,
                                 canny_edge,
                                 hough_line,
@@ -13,11 +16,26 @@ from cv_chess_functions import (read_img,
                                 remove_duplicates,
                                 remove_outside_points,
                                 atoi,
-                                trans_boxes)
+                                trans_boxes,
+                                mid_point,
+                                avg,
+                                classify_squares,
+                                perspective_transform,
+                                get_perspective_transform,
+                                board_corners,
+                                adjust_classifier,
+                                draw_boundary_warp,
+                                warp_transform,
+                                classify_2d,
+                                generate_fen,
+                                fen_from_board,
+                                get_uci
+                                )
 
 from detect import (main,
                     tensor)
-import chess
+
+
 
 
 # Resize the frame by scale by dimensions
@@ -75,6 +93,7 @@ def save_crop_img():
     cv2.imwrite('frame.jpeg', out)
     crop_frame = crop_image(out)
     cv2.imwrite('./images/chess_pictures/cropped_frame.jpeg', crop_frame)
+    return crop_frame
 
 
 # Calibrate board
@@ -82,31 +101,52 @@ def calibrate_board(calibrated):
     while not calibrated:
         print('Calibrating Board....')
         save_crop_img()
-        if cv2.waitKey(0) & 0xFF == ord('c'):
+        if cv2.waitKey(0):
+            print('C....')
             img, corner_points = detect_corners()
             if cv2.waitKey(0) & 0xFF == ord('s'):
+                # if len(corner_points) == 81:
                 print("saving corner image...")
                 cv2.imwrite('corner.jpeg', img)
-                save_corner_points(corner_points)
-                return
+                corner_array = save_corner_points(corner_points)
+                print("2d Array", corner_array)
+                return corner_array, corner_points
 
 
 def save_corner_points(corner_points):
-    rows, cols = (9, 9)
-    arr = [[0] * cols] * rows
-
+    arr = np.zeros((9, 9, 2), dtype=int)
     array_int = np.array(corner_points).astype(int)
+
+    print(array_int)
+
+    i = 0
+
+    for row_index, row in enumerate(arr):
+        for col_index, item in enumerate(row):
+            arr[row_index][col_index] = array_int[i]
+            print(row_index, col_index, i, array_int[i], arr[row_index][col_index], end=" ")
+            if i == 80:
+                print("return arr")
+                print("returned array", arr)
+                return arr
+
+            i += 1
+    print("arr", arr)
 
 
 # Select the live video stream source (0-webcam & 1-GoPro)
 cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 
 # Show the starting board either as blank or with the initial setup
-# start = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR'
+start = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR'
+new_move1 = ''
+new_move2 = ''
+
+
 # blank = '8/8/8/8/8/8/8/8'
 #
-# board = chess.Board()
-# board.push_san("e4")
+board = chess.Board()
+#board.push_san("e2e4")
 # board.push_san("e5")
 # print(board.legal_moves)
 # print(board.fen())  # prints fen
@@ -121,15 +161,69 @@ cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 model = tensor()
 
 # Calibrates the board
-calibrate_board(False)
+board_array, corner_fp = np.array(calibrate_board(False))
+print("Board Array", board_array)
+print("first item", board_array[0][0])
+print("first item", board_array[1][1])
+print("first item", board_array[0][0])
+print("first item", board_array[0][0])
+print("last item", board_array[8][8])
+
+corners = board_corners(board_array)
+print("corners", corners)
+
 
 # Run detection
 while True:
-    save_crop_img()
+    cropped_image = save_crop_img()
     print("Running Detection....")
     try:
         classes, boxes, img = main(model)
-        print("new boundaries", np.array(trans_boxes(img, boxes)))
+        boundary_arr = np.float32(trans_boxes(img, boxes))
+        mid_array = mid_point(boundary_arr)
+        print("new boundaries", boundary_arr)
+        transform = get_perspective_transform(corners, cropped_image)
+        #boundary_points_transform = perspective_transform(boundary_arr)
+        boundary_points_transform = perspective_transform(mid_array, transform)
+
+        corner_transform = perspective_transform(board_array, transform)
+
+        warped_img = warp_transform(cropped_image, transform)
+
+        draw_boundary_warp(warped_img, boundary_points_transform)
+        print("corner transform", corner_transform)
+
+        print("boundary points transform", boundary_points_transform)
+
+        #size = avg(board_array)
+        classify_arr = classify_squares(51.5, boundary_points_transform)
+
+        prediction_list = classify_2d(classify_arr, classes)
+
+        fen = fen_from_board(prediction_list)
+
+        # start = time.perf_counter()
+        #
+        # while True:
+        #
+        #     board1 = board2
+        #     board2 = prediction_list
+        #
+        #     if board1 != board2:
+        #         start = time.perf_counter()
+        #     else:
+        #         if (time.perf_counter()-start) > 5:
+        #             board2 = board2
+        #             break
+
+        print("FEN", fen)
+
+        fen_to_image(fen)
+        board_image = cv2.imread('current_board.png')
+        cv2.imshow('current board', board_image)
+
+        #adjust_classifier(mid_array, classify_arr, board_array)
+
     except TypeError:
         print(TypeError)
 

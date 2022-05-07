@@ -13,6 +13,8 @@ from PIL import Image
 import re
 import glob
 import PIL
+import io
+from more_itertools import run_length
 
 
 # Read image and do lite image processing
@@ -209,37 +211,59 @@ def grab_cell_files(folder_name='./Data/raw_data/*'):
 
 
 # Classifies each square and outputs the list in Forsyth-Edwards Notation (FEN)
-def classify_cells(model, img_filename_list):
-    category_reference = {0: 'b', 1: 'k', 2: 'n', 3: 'p', 4: 'q', 5: 'r', 6: '1', 7: 'B', 8: 'K', 9: 'N', 10: 'P',
-                          11: 'Q', 12: 'R'}
-    pred_list = []
-    for filename in img_filename_list:
-        img = prepare_image(filename)
-        out = model.predict(img)
-        top_pred = np.argmax(out)
-        pred = category_reference[top_pred]
-        pred_list.append(pred)
+def generate_fen(pred_list):
+    # category_reference = {0: 'K', 1: 'Q', 2: 'B', 3: 'N', 4: 'R', 5: 'P', 6: 'k', 7: 'q', 8: 'b', 9: 'n', 10: 'r',
+    #                       11: 'p', 12: '1'}
+    # # pred_list = []
+    # # for filename in img_filename_list:
+    # #     img = prepare_image(filename)
+    # #     out = model.predict(img)
+    # #     top_pred = np.argmax(out)
+    # #     pred = category_reference[top_pred]
+    # #     pred_list.append(pred)
+    #
+    # fen = ''.join(pred_list)
+    # fen = fen[::-1]
+    # fen = '/'.join(fen[i:i + 8] for i in range(0, len(fen), 8))
+    # sum_digits = 0
+    # for i, p in enumerate(fen):
+    #     if p.isdigit():
+    #         sum_digits += 1
+    #     elif p.isdigit() is False and (fen[i - 1].isdigit() or i == len(fen)):
+    #         fen = fen[:(i - sum_digits)] + str(sum_digits) + ('D' * (sum_digits - 1)) + fen[i:]
+    #         sum_digits = 0
+    # if sum_digits > 1:
+    #     fen = fen[:(len(fen) - sum_digits)] + str(sum_digits) + ('D' * (sum_digits - 1))
+    # fen = fen.replace('D', '')
+    # return fen
 
-    fen = ''.join(pred_list)
-    fen = fen[::-1]
-    fen = '/'.join(fen[i:i + 8] for i in range(0, len(fen), 8))
-    sum_digits = 0
-    for i, p in enumerate(fen):
-        if p.isdigit():
-            sum_digits += 1
-        elif p.isdigit() is False and (fen[i - 1].isdigit() or i == len(fen)):
-            fen = fen[:(i - sum_digits)] + str(sum_digits) + ('D' * (sum_digits - 1)) + fen[i:]
-            sum_digits = 0
-    if sum_digits > 1:
-        fen = fen[:(len(fen) - sum_digits)] + str(sum_digits) + ('D' * (sum_digits - 1))
-    fen = fen.replace('D', '')
-    return fen
+    # Use StringIO to build string more efficiently than concatenating
+    with io.StringIO() as s:
+        for row in pred_list:
+            empty = 0
+            for cell in row:
+                c = cell[0]
+                if c in ('w', 'b'):
+                    if empty > 0:
+                        s.write(str(empty))
+                        empty = 0
+                    s.write(cell[1].upper() if c == 'w' else cell[1].lower())
+                else:
+                    empty += 1
+            if empty > 0:
+                s.write(str(empty))
+            s.write('/')
+        # Move one position back to overwrite last '/'
+        s.seek(s.tell() - 1)
+        # If you do not have the additional information choose what to put
+        s.write(' w KQkq - 0 1')
+        return s.getvalue()
 
 
 # Converts the FEN into a PNG file
 def fen_to_image(fen):
     board = chess.Board(fen)
-    current_board = chess.svg.board(board=board)
+    current_board = chess.svg.board(board=board, size=1000)
 
     output_file = open('current_board.svg', "w")
     output_file.write(current_board)
@@ -308,3 +332,239 @@ def trans_boxes(img, boxes):
         new_arr.append(x2y2)
 
     return new_arr
+
+
+def mid_point(arr):
+    # print("point 1", arr[0][0])
+    # print("point 1", arr[1][0])
+    # (arr[1][0] - arr[0][0])/2 # x values
+    # arr[1][1] - (arr[1][1] - arr[0][1])/3
+
+    midpoint_list = list()
+
+    for i in range(0, len(arr), 2):
+        x = (arr[i + 1][0] + arr[i][0]) // 2
+        y = arr[i + 1][1] - (arr[i + 1][1] - arr[i][1]) // 3
+        midpoint = [x, y]
+        midpoint_list.append(midpoint)
+        print("midpoint list", midpoint_list)
+
+    print("midpoint list", midpoint_list)
+    return midpoint_list
+
+
+def avg(arr):
+    x = 0
+    y = 0
+    for i in range(0, 7):
+        x += (arr[i + 1][i + 1][0] - arr[i][i][0]) // 8
+        y += (arr[i + 1][i + 1][1] - arr[i][i][1]) // 8
+
+    size = [x, y]
+    print("size", size)
+    return size
+
+
+def classify_squares(size, midpoint):
+    classify_arr = []
+    for i in midpoint:
+        print("Midpoint", i[0])
+
+        x = i[0]
+        y = i[1]
+
+        square_x = x // size
+        square_y = y // size
+
+        classify_arr.append([int(square_x), int(square_y)])
+
+        print("square x", square_x, "square_y", square_y)
+
+    print("classify arr", classify_arr)
+    return classify_arr
+
+
+def adjust_classifier(midpoint, classify_arr, board_arr):
+    adjust_classify_arr = list()
+
+    for mid, classify in zip(midpoint, classify_arr):
+        x = mid[0]
+        y = mid[1]
+
+        classify_x = classify[0]
+        classify_y = classify[1]
+        if classify_x > 8:
+            classify_x = 8
+        if classify_x < 0:
+            classify_x = 0
+
+        if classify_y > 7:
+            classify_y = 7
+        if classify_y < 0:
+            classify_y = 0
+
+        dx1 = board_arr[classify_x + 1][classify_y + 1][0] - x
+        dx2 = board_arr[classify_x][classify_y][0] - x
+        dy1 = board_arr[classify_x + 1][classify_y + 1][1] - y
+        dy2 = board_arr[classify_x][classify_y][1] - y
+
+        if dx1 >= 0:
+            dx1 = 0.5
+        else:
+            dx1 = -0.5
+
+        if dx2 > 0:
+            dx2 = 0.5
+        else:
+            dx2 = -0.5
+
+        if dy1 >= 0:
+            dy1 = 0.5
+        else:
+            dy1 = -0.5
+
+        if dy2 > 0:
+            dy2 = 0.5
+        else:
+            dy2 = -0.5
+
+        dx = dx1 + dx2
+        dy = dy1 + dy2
+        adjust_classify = [classify[0] + dx, classify[1] + dy]
+        adjust_classify_arr.append(adjust_classify)
+
+    print("adjust classify array: ", adjust_classify_arr)
+
+    return adjust_classify_arr
+
+
+def board_corners(arr):
+    rect = np.float32([arr[0][0], arr[0][8], arr[8][0], arr[8][8]])
+    # rect = np.array([list(arr[0]), list(arr[8]), list(arr[71]), list(arr[80])])
+    print("RECT", rect)
+    return rect
+
+
+def get_perspective_transform(corners, img):
+    height = 412
+    width = 412
+    dst = np.array([[0, 0], [width, 0], [0, width], [height, width]], dtype="float32")
+    transform = cv2.getPerspectiveTransform(corners, dst)
+    print("transform points", transform)
+
+    return transform  # , warped_img
+
+
+def perspective_transform(mid_points, shape):
+    transformed_midpoint = []
+
+    for i in mid_points:
+        new_arr = [i[0], i[1], 1]
+        x, y, z = shape.dot(new_arr)
+        # transf_homg_point /= transf_homg_point[2]
+        transformed_midpoint.append([x // z, y // z])
+
+    print("transformed midpoint", transformed_midpoint)
+    return transformed_midpoint
+
+
+def warp_transform(img, transform):
+    height = 412
+    width = 412
+    warped_img = cv2.warpPerspective(img, transform, (width, height))
+
+    cv2.imshow("transformed image", warped_img)
+
+    # print("cartesian points", cv2.convertPointsFromHomogeneous(transform))
+    return warped_img
+
+
+def draw_boundary_warp(warped_img, midpoints):
+    for mid in midpoints:
+        warped_img = cv2.circle(warped_img, (int(mid[0]), int(mid[1])), 2, (255, 0, 0), 2)
+
+    cv2.imshow("warped image", warped_img)
+
+
+def classify_2d(classify_arr, predict_arr):
+    category_reference = {0: 'wk', 1: 'wq', 2: 'wb', 3: 'wn', 4: 'wr', 5: 'wp', 6: 'bk', 7: 'bq', 8: 'bb', 9: 'bn',
+                          10: 'br', 11: 'bp', 12: 'em'}
+
+    pred_list = np.empty(shape=(8, 8), dtype=object)
+    pred_list.fill('em')
+
+    for classify, predict in zip(classify_arr, predict_arr):
+        pred_list[classify[0]][classify[1]] = category_reference[predict]
+
+    flipped_arr = np.fliplr(pred_list)
+    print("flipped_arr", flipped_arr)
+    transposed_list = pred_list.T
+
+    # transposed_list = transposed_list.view(1, -1)
+
+    # transposed_list = np.reshape(transposed_list, (1,0))
+
+    flatten_list = transposed_list.flatten()
+
+    print("transposed_list", transposed_list)
+
+    print("pred list", flatten_list)
+
+    print("normal_list", pred_list)
+
+    return flipped_arr
+
+
+def convert_cell(value):
+    if value == 'em':
+        return None
+    else:
+        color, piece = value
+        return piece.upper() if color == 'w' else piece.lower()
+
+
+def convert_rank(rank):
+    return ''.join(
+        value * count if value else str(count)
+        for value, count in run_length.encode(map(convert_cell, rank))
+    )
+
+
+def fen_from_board(board):
+    return '/'.join(map(convert_rank, board)) + ' w KQkq - 0 1'
+
+
+def get_uci(board1, board2, who_moved = "w"):
+    nums = {1: "a", 2: "b", 3: "c", 4: "d", 5: "e", 6: "f", 7: "g", 8: "h"}
+    str_board = str(board1).split("\n")
+    str_board2 = str(board2).split("\n")
+    move = ""
+    flip = False
+    if who_moved == "w":
+        for i in range(8)[::-1]:
+            for x in range(15)[::-1]:
+                if str_board[i][x] != str_board2[i][x]:
+                    if str_board[i][x] == "." and move == "":
+                        flip = True
+                    move += str(nums.get(round(x / 2) + 1)) + str(9 - (i + 1))
+    else:
+        for i in range(8):
+            for x in range(15):
+                if str_board[i][x] != str_board2[i][x]:
+                    if str_board[i][x] == "." and move == "":
+                        flip = True
+                    move += str(nums.get(round(x / 2) + 1)) + str(9 - (i + 1))
+    if flip:
+        move = move[2] + move[3] + move[0] + move[1]
+
+    print("MOVE: ", move)
+    return move
+# Casesg
+# Capture
+# Movement
+# Castling
+# Promotion
+#
+# def fen_compare(pred_list1, pred_list2):
+#
+#     return move

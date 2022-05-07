@@ -9,4 +9,5 @@ tqdm
 pycocotools
 chess
 svglib
+more-itertools
 
