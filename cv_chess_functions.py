@@ -208,7 +208,9 @@ def get_perspective_transform(corners, img):
 
 # Performs perspective transform on midpoints
 def perspective_transform(mid_points, shape):
+
     transformed_midpoint = []
+    #transformed_midpoint = np.empty(dtype=object)
 
     for i in mid_points:
         new_arr = [i[0], i[1], 1]
@@ -309,8 +311,8 @@ def get_uci(board1, board2, who_moved):
                     move += str(nums.get(round(x / 2) + 1)) + str(9 - (i + 1))
     if flip:
         move = move[2] + move[3] + move[0] + move[1]
-    print("WHO MOVED:", who_moved)
-    print("MOVE: ", move)
+    #print("WHO MOVED:", who_moved)
+    #print("MOVE: ", move)
     if move == 'h1g1f1e1':
         # return 'h1g1'
         return 'e1g1'

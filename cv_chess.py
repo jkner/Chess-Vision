@@ -83,10 +83,9 @@ def save_crop_img():
 # Calibrate board
 def calibrate_board(calibrated):
     while not calibrated:
-        print('Calibrating Board....')
+        print('Calibrating Board...')
         save_crop_img()
         if cv2.waitKey(0):
-            # print('C....')
             img, corner_points = detect_corners()
             if cv2.waitKey(0) & 0xFF == ord('s'):
                 # if len(corner_points) == 81:
@@ -100,7 +99,6 @@ def calibrate_board(calibrated):
 def save_corner_points(corner_points):
     arr = np.zeros((9, 9, 2), dtype=int)
     array_int = np.array(corner_points).astype(int)
-
     # print(array_int)
 
     i = 0
@@ -130,7 +128,7 @@ board = chess.Board()
 model = tensor()
 
 # Calibrates the board
-board_array, corner_fp = np.array(calibrate_board(False))
+board_array, corner_fp = calibrate_board(False)
 
 corners = board_corners(board_array)
 
@@ -144,14 +142,15 @@ new_pgn = open("./pgn/unix-" + str(now) + ".pgn", "x")
 # print(game)
 
 # Header
-new_pgn.write(
-    # "[Event" + '"Example"]' + "\n" +
-    "[Date '" + str(today) + "']" + "\n")
+# new_pgn.write(
+#     # "[Event" + '"Example"]' + "\n" +
+#     "[Date '" + str(today) + "']" + "\n")
 
 # Run detection
+print("Running Detection....")
 while True:
     cropped_image = save_crop_img()
-    print("Running Detection....")
+
     try:
         classes, boxes, img = main(model)
         boundary_arr = np.float32(trans_boxes(img, boxes))
@@ -177,26 +176,24 @@ while True:
 
         fen_to_pil(board.fen())
 
-        print("New_Move", new_move)
 
         try:
             valid = chess.Move.from_uci(new_move) in board.legal_moves
-            print("Board_State: ", board)
-            print("Valid: ", valid)
 
             if valid:
+                print("Valid move:", new_move)
                 board.push_san(str(new_move))
                 move_arr.append(new_move)
+                print("MOVES: ", board2.variation_san([chess.Move.from_uci(m) for m in move_arr]))
 
             else:
                 continue
 
         except ValueError:
-            print("Did not Detect Valid Move")
-        print("MOVES: ", board2.variation_san([chess.Move.from_uci(m) for m in move_arr]))
+            pass
 
-    except:
-        continue
+    except TypeError:
+        pass
 
     if cv2.waitKey(1) & 0xFF == ord('c'):
         calibrate_board(False)
