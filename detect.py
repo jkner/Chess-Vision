@@ -132,9 +132,9 @@ def main(model):
         boxes, scores, classes, valid_detections = detect_batch_img(batch_img, model, args)
         boxes, scores, classes = tta_nms(boxes, scores, classes, valid_detections, args)
         #print(boxes)
-        #print(scores)
+        #print("Scores: ", scores)
         #print(classes)
         plot_boxes(img_copy, boxes, scores, classes, class_names, args)
         cv2.imshow("Detection Image", img_copy/255)
-        cv2.imwrite("detection.jpeg", img_copy/255)
+        #cv2.imwrite("./images/board_images/detection.jpeg", img_copy/255)
         return classes, boxes, img
