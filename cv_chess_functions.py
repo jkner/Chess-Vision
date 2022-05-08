@@ -15,7 +15,7 @@ import glob
 import PIL
 import io
 from more_itertools import run_length
-
+from fen2pil import draw
 
 # Read image and do lite image processing
 def read_img(file):
@@ -271,7 +271,10 @@ def fen_to_image(fen):
 
     svg = svg2rlg('current_board.svg')
     renderPM.drawToFile(svg, 'current_board.png', fmt="PNG")
-    return board
+
+    board_image = cv2.imread('current_board.png')
+    cv2.imshow('current board', board_image)
+
 
 
 def dist(i, p):  # finds distance between pts, kinda
@@ -347,9 +350,9 @@ def mid_point(arr):
         y = arr[i + 1][1] - (arr[i + 1][1] - arr[i][1]) // 3
         midpoint = [x, y]
         midpoint_list.append(midpoint)
-        print("midpoint list", midpoint_list)
+        #print("midpoint list", midpoint_list)
 
-    print("midpoint list", midpoint_list)
+    #print("midpoint list", midpoint_list)
     return midpoint_list
 
 
@@ -361,14 +364,14 @@ def avg(arr):
         y += (arr[i + 1][i + 1][1] - arr[i][i][1]) // 8
 
     size = [x, y]
-    print("size", size)
+    #print("size", size)
     return size
 
 
 def classify_squares(size, midpoint):
     classify_arr = []
     for i in midpoint:
-        print("Midpoint", i[0])
+        #print("Midpoint", i[0])
 
         x = i[0]
         y = i[1]
@@ -378,9 +381,9 @@ def classify_squares(size, midpoint):
 
         classify_arr.append([int(square_x), int(square_y)])
 
-        print("square x", square_x, "square_y", square_y)
+        #print("square x", square_x, "square_y", square_y)
 
-    print("classify arr", classify_arr)
+    #print("classify arr", classify_arr)
     return classify_arr
 
 
@@ -433,7 +436,7 @@ def adjust_classifier(midpoint, classify_arr, board_arr):
         adjust_classify = [classify[0] + dx, classify[1] + dy]
         adjust_classify_arr.append(adjust_classify)
 
-    print("adjust classify array: ", adjust_classify_arr)
+    #print("adjust classify array: ", adjust_classify_arr)
 
     return adjust_classify_arr
 
@@ -441,7 +444,7 @@ def adjust_classifier(midpoint, classify_arr, board_arr):
 def board_corners(arr):
     rect = np.float32([arr[0][0], arr[0][8], arr[8][0], arr[8][8]])
     # rect = np.array([list(arr[0]), list(arr[8]), list(arr[71]), list(arr[80])])
-    print("RECT", rect)
+    #print("RECT", rect)
     return rect
 
 
@@ -450,7 +453,7 @@ def get_perspective_transform(corners, img):
     width = 412
     dst = np.array([[0, 0], [width, 0], [0, width], [height, width]], dtype="float32")
     transform = cv2.getPerspectiveTransform(corners, dst)
-    print("transform points", transform)
+    #print("transform points", transform)
 
     return transform  # , warped_img
 
@@ -464,7 +467,7 @@ def perspective_transform(mid_points, shape):
         # transf_homg_point /= transf_homg_point[2]
         transformed_midpoint.append([x // z, y // z])
 
-    print("transformed midpoint", transformed_midpoint)
+    #print("transformed midpoint", transformed_midpoint)
     return transformed_midpoint
 
 
@@ -473,7 +476,7 @@ def warp_transform(img, transform):
     width = 412
     warped_img = cv2.warpPerspective(img, transform, (width, height))
 
-    cv2.imshow("transformed image", warped_img)
+    #cv2.imshow("transformed image", warped_img)
 
     # print("cartesian points", cv2.convertPointsFromHomogeneous(transform))
     return warped_img
@@ -497,7 +500,7 @@ def classify_2d(classify_arr, predict_arr):
         pred_list[classify[0]][classify[1]] = category_reference[predict]
 
     flipped_arr = np.fliplr(pred_list)
-    print("flipped_arr", flipped_arr)
+    #print("flipped_arr", flipped_arr)
     transposed_list = pred_list.T
 
     # transposed_list = transposed_list.view(1, -1)
@@ -506,13 +509,43 @@ def classify_2d(classify_arr, predict_arr):
 
     flatten_list = transposed_list.flatten()
 
-    print("transposed_list", transposed_list)
+    #print("transposed_list", transposed_list)
 
-    print("pred list", flatten_list)
+    #print("pred list", flatten_list)
 
-    print("normal_list", pred_list)
+    #print("normal_list", pred_list)
 
     return flipped_arr
+
+#classifies using python-chess object notation:
+
+def classify_object_notation(classify_arr, predict_arr):
+    category_reference = {0: 'K', 1: 'Q', 2: 'B', 3: 'N', 4: 'R', 5: 'P', 6: 'k', 7: 'q', 8: 'b', 9: 'n',
+                          10: 'r', 11: 'p', 12: '.'}
+
+    pred_list = np.empty(shape=(8, 8), dtype=object)
+    pred_list.fill('.')
+
+    for classify, predict in zip(classify_arr, predict_arr):
+        pred_list[classify[0]][classify[1]] = category_reference[predict]
+
+    flipped_arr = np.fliplr(pred_list)
+    #print("flipped_arr", flipped_arr)
+
+    row1 = flipped_arr[0]
+    row1 = (','.join(row1)) #remove commas
+    row1 = row1.replace(',', ' ') #replace commas with space
+    row1 = str(row1)
+
+    new_arr = []
+
+    for row in flipped_arr:
+        new_row = (','.join(row)).replace(',', ' ')
+        new_arr.append(new_row)
+
+    #print(new_arr)
+    #print("row1", row1)
+    return new_arr
 
 
 def convert_cell(value):
@@ -537,20 +570,23 @@ def fen_from_board(board):
 def get_uci(board1, board2, who_moved = "w"):
     nums = {1: "a", 2: "b", 3: "c", 4: "d", 5: "e", 6: "f", 7: "g", 8: "h"}
     str_board = str(board1).split("\n")
-    str_board2 = str(board2).split("\n")
+    #print("strboard split", str_board )
+    #print("strboard split2", board2)
     move = ""
     flip = False
     if who_moved == "w":
         for i in range(8)[::-1]:
             for x in range(15)[::-1]:
-                if str_board[i][x] != str_board2[i][x]:
+                #print("strboard1", str_board[i][x])
+                #print("strboard2", board2[i][x] )
+                if str_board[i][x] != board2[i][x]:
                     if str_board[i][x] == "." and move == "":
                         flip = True
                     move += str(nums.get(round(x / 2) + 1)) + str(9 - (i + 1))
     else:
         for i in range(8):
             for x in range(15):
-                if str_board[i][x] != str_board2[i][x]:
+                if str_board[i][x] != board2[i][x]:
                     if str_board[i][x] == "." and move == "":
                         flip = True
                     move += str(nums.get(round(x / 2) + 1)) + str(9 - (i + 1))
@@ -558,6 +594,12 @@ def get_uci(board1, board2, who_moved = "w"):
         move = move[2] + move[3] + move[0] + move[1]
 
     print("MOVE: ", move)
+    if (move == 'h1g1f1e1') | (move == 'h8g8f8e8'):
+        #return 'h1g1'
+        return 'O-O'
+    elif (move == 'e1d1c1a1') | (move == 'e8d8c8a8'):
+        return 'O-O-O'
+        #return 'e1c1'
     return move
 # Casesg
 # Capture
@@ -568,3 +610,18 @@ def get_uci(board1, board2, who_moved = "w"):
 # def fen_compare(pred_list1, pred_list2):
 #
 #     return move
+
+
+def fen_to_pil(fen):
+    pil_image = draw.transform_fen_pil(
+        fen=fen,
+        board_size=480,
+        light_color=(255, 253, 208),
+        dark_color=(76, 153, 0)
+    )
+    pil_image.show()
+    # renderPM.drawToFile(pil_image, 'current_board.png', fmt="PNG")
+    #
+    #
+    # board_image = cv2.imread('current_board.png')
+    # cv2.imshow('current board', board_image)
