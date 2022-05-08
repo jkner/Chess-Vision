@@ -66,7 +66,7 @@ def detect_corners():
     # Draws Chessboard Corners using corner points
     drawn = cv2.drawChessboardCorners(img, (9, 9), inner_points, True)
 
-    # cv2.imwrite('./corner1.jpeg', drawn)q
+    cv2.imwrite('./images/board_images/board_with_corners.jpeg', drawn)
     cv2.imshow('Corners', drawn)
     return drawn, inner_points
 
@@ -75,7 +75,6 @@ def save_crop_img():
     ret, frame = cap.read()
     cv2.imshow('live', frame / 255)
     out = cv2.addWeighted(frame, 1, frame, 0, 1)
-    cv2.imwrite('frame.jpeg', out)
     crop_frame = crop_image(out)
     cv2.imwrite('./images/chess_pictures/cropped_frame.jpeg', crop_frame)
     return crop_frame
@@ -92,7 +91,7 @@ def calibrate_board(calibrated):
             if cv2.waitKey(0) & 0xFF == ord('s'):
                 # if len(corner_points) == 81:
                 print("saving corner image...")
-                cv2.imwrite('corner.jpeg', img)
+                cv2.imwrite('./images/board_images/corner.jpeg', img)
                 corner_array = save_corner_points(corner_points)
                 # print("2d Array", corner_array)
                 return corner_array, corner_points
@@ -136,10 +135,6 @@ board_array, corner_fp = np.array(calibrate_board(False))
 corners = board_corners(board_array)
 
 today = date.today()
-# game = chess.pgn.Game()
-#
-# game.headers["Event"] = "Example"
-# game.headers["Date"] = str(today)
 
 move_arr = []
 
@@ -151,7 +146,7 @@ new_pgn = open("./pgn/unix-" + str(now) + ".pgn", "x")
 # Header
 new_pgn.write(
     # "[Event" + '"Example"]' + "\n" +
-    "[Date '" + str(today) + "' ]" + "\n")
+    "[Date '" + str(today) + "']" + "\n")
 
 # Run detection
 while True:
@@ -168,9 +163,9 @@ while True:
 
         corner_transform = perspective_transform(board_array, transform)
 
-        warped_img = warp_transform(cropped_image, transform)
-
-        draw_boundary_warp(warped_img, boundary_points_transform)
+        # warped_img = warp_transform(cropped_image, transform)
+        #
+        # draw_boundary_warp(warped_img, boundary_points_transform)
 
         classify_arr = classify_squares(51.5, boundary_points_transform)
 
@@ -178,9 +173,9 @@ while True:
 
         new_board = classify_object_notation(classify_arr, classes)
 
-        # fen = fen_from_board(prediction_list)
-
         new_move = get_uci(board, new_board, board.turn)
+
+        fen_to_pil(board.fen())
 
         print("New_Move", new_move)
 
@@ -192,7 +187,6 @@ while True:
             if valid:
                 board.push_san(str(new_move))
                 move_arr.append(new_move)
-                fen_to_pil(board.fen())
 
             else:
                 continue

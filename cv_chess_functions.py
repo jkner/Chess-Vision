@@ -225,8 +225,7 @@ def warp_transform(img, transform):
     height = 412
     width = 412
     warped_img = cv2.warpPerspective(img, transform, (width, height))
-
-    cv2.imshow("transformed image", warped_img)
+    #cv2.imshow("transformed image", warped_img)
 
     return warped_img
 
