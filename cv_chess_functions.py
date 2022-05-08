@@ -26,11 +26,6 @@ def read_img(file):
     return img, gray_blur
 
 
-# def image_gray(img):
-#     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-#     gray_blur = cv2.blur(gray, (1, 1))
-#     return gray_blur
-
 # Canny edge detection
 def canny_edge(img, sigma=0.33):
     v = np.median(img)
@@ -71,20 +66,6 @@ def line_intersections(h_lines, v_lines):
             points.append(inter_point)
     return np.array(points)
 
-
-# Hierarchical cluster (by euclidean distance) intersection points
-def cluster_points(points):
-    dists = spatial.distance.pdist(points)
-    single_linkage = cluster.hierarchy.single(dists)
-    flat_clusters = cluster.hierarchy.fcluster(single_linkage, 15, 'distance')
-    cluster_dict = defaultdict(list)
-    for i in range(len(flat_clusters)):
-        cluster_dict[flat_clusters[i]].append(points[i])
-    cluster_values = cluster_dict.values()
-    clusters = map(lambda arr: (np.mean(np.array(arr)[:, 0]), np.mean(np.array(arr)[:, 1])), cluster_values)
-    return sorted(list(clusters), key=lambda k: [k[1], k[0]])
-
-
 # Average the y value in each row and augment original points
 def augment_points(points):
     points_shape = list(np.shape(points))
@@ -105,176 +86,6 @@ def augment_points(points):
             augmented_points.append(point)
     augmented_points = sorted(augmented_points, key=lambda k: [k[1], k[0]])
     return augmented_points
-
-
-# Crop board into separate images and write to folder
-def write_crop_images(img, points, img_count=0, folder_path='./Data/raw_data/'):
-    num_list = []
-    shape = list(np.shape(points))
-    start_point = shape[0] - 14
-
-    if int(shape[0] / 11) >= 8:
-        range_num = 8
-    else:
-        range_num = int((shape[0] / 11) - 2)
-
-    for row in range(range_num):
-        start = start_point - (row * 11)
-        end = (start_point - 8) - (row * 11)
-        num_list.append(range(start, end, -1))
-
-    for row in num_list:
-        for s in row:
-            # ratio_h = 2
-            # ratio_w = 1
-            base_len = math.dist(points[s], points[s + 1])
-            bot_left, bot_right = points[s], points[s + 1]
-            start_x, start_y = int(bot_left[0]), int(bot_left[1] - (base_len * 2))
-            end_x, end_y = int(bot_right[0]), int(bot_right[1])
-            if start_y < 0:
-                start_y = 0
-            cropped = img[start_y: end_y, start_x: end_x]
-            img_count += 1
-            cv2.imwrite('./Data/raw_data/data_image' + str(img_count) + '.jpeg', cropped)
-            # print(folder_path + 'data' + str(img_count) + '.jpeg')
-    return img_count
-
-
-# Crop board into separate images and shows
-def x_crop_images(img, points):
-    num_list = []
-    img_list = []
-    shape = list(np.shape(points))
-    start_point = shape[0] - 14
-
-    if int(shape[0] / 11) >= 8:
-        range_num = 8
-    else:
-        range_num = int((shape[0] / 11) - 2)
-
-    for row in range(range_num):
-        start = start_point - (row * 11)
-        end = (start_point - 8) - (row * 11)
-        num_list.append(range(start, end, -1))
-
-    for row in num_list:
-        for s in row:
-            base_len = math.dist(points[s], points[s + 1])
-            bot_left, bot_right = points[s], points[s + 1]
-            start_x, start_y = int(bot_left[0]), int(bot_left[1] - (base_len * 2))
-            end_x, end_y = int(bot_right[0]), int(bot_right[1])
-            if start_y < 0:
-                start_y = 0
-            cropped = img[start_y: end_y, start_x: end_x]
-            img_list.append(cropped)
-            # print(folder_path + 'data' + str(img_count) + '.jpeg')
-    return img_list
-
-
-# Convert image from RGB to BGR
-def convert_image_to_bgr_numpy_array(image_path, size=(224, 224)):
-    image = PIL.Image.open(image_path).resize(size)
-    img_data = np.array(image.getdata(), np.float32).reshape(*size, -1)
-    # swap R and B channels
-    img_data = np.flip(img_data, axis=2)
-    return img_data
-
-
-# Adjust image into (1, 224, 224, 3)
-def prepare_image(image_path):
-    im = convert_image_to_bgr_numpy_array(image_path)
-
-    im[:, :, 0] -= 103.939
-    im[:, :, 1] -= 116.779
-    im[:, :, 2] -= 123.68
-
-    im = np.expand_dims(im, axis=0)
-    return im
-
-
-# Changes digits in text to ints
-def atoi(text):
-    return int(text) if text.isdigit() else text
-
-
-# Finds the digits in a string
-def natural_keys(text):
-    return [atoi(c) for c in re.split('(\d+)', text)]
-
-
-# Reads in the cropped images to a list
-def grab_cell_files(folder_name='./Data/raw_data/*'):
-    img_filename_list = []
-    for path_name in glob.glob(folder_name):
-        img_filename_list.append(path_name)
-    # img_filename_list = img_filename_list.sort(key=natural_keys)
-    return img_filename_list
-
-
-# Classifies each square and outputs the list in Forsyth-Edwards Notation (FEN)
-def generate_fen(pred_list):
-    # category_reference = {0: 'K', 1: 'Q', 2: 'B', 3: 'N', 4: 'R', 5: 'P', 6: 'k', 7: 'q', 8: 'b', 9: 'n', 10: 'r',
-    #                       11: 'p', 12: '1'}
-    # # pred_list = []
-    # # for filename in img_filename_list:
-    # #     img = prepare_image(filename)
-    # #     out = model.predict(img)
-    # #     top_pred = np.argmax(out)
-    # #     pred = category_reference[top_pred]
-    # #     pred_list.append(pred)
-    #
-    # fen = ''.join(pred_list)
-    # fen = fen[::-1]
-    # fen = '/'.join(fen[i:i + 8] for i in range(0, len(fen), 8))
-    # sum_digits = 0
-    # for i, p in enumerate(fen):
-    #     if p.isdigit():
-    #         sum_digits += 1
-    #     elif p.isdigit() is False and (fen[i - 1].isdigit() or i == len(fen)):
-    #         fen = fen[:(i - sum_digits)] + str(sum_digits) + ('D' * (sum_digits - 1)) + fen[i:]
-    #         sum_digits = 0
-    # if sum_digits > 1:
-    #     fen = fen[:(len(fen) - sum_digits)] + str(sum_digits) + ('D' * (sum_digits - 1))
-    # fen = fen.replace('D', '')
-    # return fen
-
-    # Use StringIO to build string more efficiently than concatenating
-    with io.StringIO() as s:
-        for row in pred_list:
-            empty = 0
-            for cell in row:
-                c = cell[0]
-                if c in ('w', 'b'):
-                    if empty > 0:
-                        s.write(str(empty))
-                        empty = 0
-                    s.write(cell[1].upper() if c == 'w' else cell[1].lower())
-                else:
-                    empty += 1
-            if empty > 0:
-                s.write(str(empty))
-            s.write('/')
-        # Move one position back to overwrite last '/'
-        s.seek(s.tell() - 1)
-        # If you do not have the additional information choose what to put
-        s.write(' w KQkq - 0 1')
-        return s.getvalue()
-
-
-# Converts the FEN into a PNG file
-def fen_to_image(fen):
-    board = chess.Board(fen)
-    current_board = chess.svg.board(board=board, size=1000)
-
-    output_file = open('current_board.svg', "w")
-    output_file.write(current_board)
-    output_file.close()
-
-    svg = svg2rlg('current_board.svg')
-    renderPM.drawToFile(svg, 'current_board.png', fmt="PNG")
-
-    board_image = cv2.imread('current_board.png')
-    cv2.imshow('current board', board_image)
 
 
 def dist(i, p):  # finds distance between pts, kinda
@@ -313,16 +124,6 @@ def crop_image(img):
     cropped_img = img[15:1000, 65:590]  # TODO: replace with actual points from the board later
 
     return cropped_img
-
-
-# def make_square(im, min_size=416, fill_color=(0, 0, 0, 0)):
-#     x, y = im.size
-#     print(x, y)
-#     size = max(416, x, y)
-#     new_im = Image.new('RGBA', (size, size), fill_color)
-#     new_im.paste(im, (int((size - x) / 2), int((size - y) / 2)))
-#     print(new_im.size)
-#     return new_im
 
 
 def trans_boxes(img, boxes):
@@ -448,10 +249,7 @@ def classify_2d(classify_arr, predict_arr):
         predicted_list[classify[0]][classify[1]] = category_reference[predict]
 
     flipped_arr = np.fliplr(predicted_list)
-    # print("flipped_arr", flipped_arr)
-    # transposed_list = predicted_list.T
-    #
-    # flatten_list = transposed_list.flatten()
+
 
     return flipped_arr
 
@@ -485,25 +283,6 @@ def classify_object_notation(classify_arr, predict_arr):
     # print(new_arr)
     # print("row1", row1)
     return new_arr
-
-
-def convert_cell(value):
-    if value == 'em':
-        return None
-    else:
-        color, piece = value
-        return piece.upper() if color == 'w' else piece.lower()
-
-
-def convert_rank(rank):
-    return ''.join(
-        value * count if value else str(count)
-        for value, count in run_length.encode(map(convert_cell, rank))
-    )
-
-
-def fen_from_board(board):
-    return '/'.join(map(convert_rank, board)) + ' w KQkq - 0 1'
 
 
 def get_uci(board1, board2, who_moved):
@@ -546,17 +325,6 @@ def get_uci(board1, board2, who_moved):
     return move
 
 
-# Casesg
-# Capture
-# Movement
-# Castling
-# Promotion
-#
-# def fen_compare(pred_list1, pred_list2):
-#
-#     return move
-
-
 def fen_to_pil(fen):
     pil_image = draw.transform_fen_pil(
         fen=fen,
@@ -564,15 +332,7 @@ def fen_to_pil(fen):
         light_color=(255, 253, 208),
         dark_color=(0, 127, 70)
     )
-    # pil_image.show()
-    # cv2.imwrite("new_board.png", pil_image)
-    board_image = cv2.imread('new_board.png')
-    # cv2.imshow("current_board", pil_image)
-    # renderPM.drawToFile(pil_image, 'current_board.png', fmt="PNG")
-    #
-    #
-    # board_image = cv2.imread('current_board.png')
-    # cv2.imshow('current board', board_image)
+
     open_cv_image = np.array(pil_image.convert('RGB'))
     open_cv_image = open_cv_image[:, :, ::-1].copy()
     cv2.imshow("current_board", open_cv_image)

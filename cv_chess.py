@@ -12,12 +12,10 @@ from cv_chess_functions import (read_img,
                                 hough_line,
                                 h_v_lines,
                                 line_intersections,
-                                cluster_points,
                                 augment_points,
                                 crop_image,
                                 remove_duplicates,
                                 remove_outside_points,
-                                atoi,
                                 trans_boxes,
                                 mid_point,
                                 classify_squares,
@@ -27,7 +25,6 @@ from cv_chess_functions import (read_img,
                                 draw_boundary_warp,
                                 warp_transform,
                                 classify_2d,
-                                fen_from_board,
                                 get_uci,
                                 classify_object_notation,
                                 fen_to_pil
@@ -40,10 +37,6 @@ from detect import (main,
 def rescale_frame(frame):
     dim = (416, 416)
     return cv2.resize(frame, dim, interpolation=cv2.INTER_AREA)
-
-
-def natural_keys(text):
-    return [atoi(c) for c in re.split('(\d+)', text)]
 
 
 # Finding Corners
@@ -60,26 +53,22 @@ def detect_corners():
     # Find and cluster the intersecting
     intersection_points = line_intersections(h_lines, v_lines)
 
-    # two ways to cluster
-    cluster1 = cluster_points(intersection_points)
-    cluster2 = remove_duplicates(intersection_points)
+    # Combine cluster into one point
+    cluster = remove_duplicates(intersection_points)
 
     # Final coordinates of the board
-    aug_points = np.array(augment_points(cluster2))
+    aug_points = np.array(augment_points(cluster))
 
     # Remove Outside Points:
-    inner_points1 = remove_outside_points(cluster1)
-    inner_points2 = remove_outside_points(aug_points)
+
+    inner_points = remove_outside_points(aug_points)
 
     # Draws Chessboard Corners using corner points
-    drawn = cv2.drawChessboardCorners(img, (9, 9), inner_points2, True)
+    drawn = cv2.drawChessboardCorners(img, (9, 9), inner_points, True)
 
-    # cv2.imwrite('./corner1.jpeg', drawn)
+    # cv2.imwrite('./corner1.jpeg', drawn)q
     cv2.imshow('Corners', drawn)
-
-    num_of_corners = len(inner_points2)
-    # print("num of corners", num_of_corners)
-    return drawn, inner_points2
+    return drawn, inner_points
 
 
 def save_crop_img():
