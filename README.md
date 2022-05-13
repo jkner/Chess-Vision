@@ -32,7 +32,7 @@ pip install -r requirements.txt
 
 ## Evaluation Results:
 
-****Evaluation results(GTX2080,mAP@0.5):****
+****Evaluation results(GTX3060Ti,mAP@0.5):****
 
 | model                                             | Chess Pieces |
 |--------------------------------------|----------------|   
