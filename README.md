@@ -47,6 +47,7 @@ python3 cv_chess.py
 ```
 
 ## Detection Result
+![alt text](https://github.com/jkner/Chess-Vision/images/board_images/detected_board.png?raw=true)
 
 ## References
 
