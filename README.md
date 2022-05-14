@@ -20,15 +20,15 @@ ScaledYOLOv4_tiny_detection_result:
     [Tensorflow Gpu :: Anaconda.org](https://anaconda.org/anaconda/tensorflow-gpu)
     
 
-```jsx
-conda install -c anaconda tensorflow-gpu
-```
+    ```jsx
+    conda install -c anaconda tensorflow-gpu
+    ```
 
 1. Install requirements:
 
-```jsx
-pip install -r requirements.txt
-```
+    ```jsx
+    pip install -r requirements.txt
+    ```
 
 ## Evaluation Results:
 
