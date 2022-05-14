@@ -21,7 +21,8 @@ from fen2pil import draw
 # Read image and do lite image processing
 def read_img(file):
     img = cv2.imread(str(file))
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    out = cv2.addWeighted(img, 1, img, 0, 0)
+    gray = cv2.cvtColor(out, cv2.COLOR_BGR2GRAY)
     gray_blur = cv2.blur(gray, (1, 1))
     return img, gray_blur
 
@@ -32,6 +33,8 @@ def canny_edge(img, sigma=0.33):
     lower = int(max(0, (1.0 - sigma) * v))
     upper = int(min(255, (1.0 + sigma) * v))
     edges = cv2.Canny(img, lower, upper, apertureSize=3)
+
+    cv2.imshow("1", edges)
     return edges
 
 
@@ -39,7 +42,6 @@ def canny_edge(img, sigma=0.33):
 def hough_line(edges, min_line_length=100, max_line_gap=10):
     lines = cv2.HoughLines(edges, 1, np.pi / 180, 125, min_line_length, max_line_gap)
     lines = np.reshape(lines, (-1, 2))
-
     # cv2.imwrite("testHough.jpg", lines)
     return lines
 
@@ -52,6 +54,7 @@ def h_v_lines(lines):
             v_lines.append([rho, theta])
         else:
             h_lines.append([rho, theta])
+
     return h_lines, v_lines
 
 
@@ -65,6 +68,7 @@ def line_intersections(h_lines, v_lines):
             inter_point = np.linalg.solve(a, b)
             points.append(inter_point)
     return np.array(points)
+
 
 # Average the y value in each row and augment original points
 def augment_points(points):
@@ -101,7 +105,6 @@ def remove_duplicates(list_of_points):
     # return [p for p in list if all(dist(i,p) > 3 for i in list)]
     out = []
     for i in range(len(list_of_points)):
-        c = True
         if all(dist(list_of_points[i], p) > 15 for p in out):
             out.append(list_of_points[i])
     return np.array(out)
@@ -237,6 +240,7 @@ def draw_boundary_warp(warped_img, midpoints):
     for mid in midpoints:
         warped_img = cv2.circle(warped_img, (int(mid[0]), int(mid[1])), 2, (255, 0, 0), 2)
 
+    cv2.imshow("transformed image", warped_img)
 
 
 def classify_2d(classify_arr, predict_arr):
@@ -246,58 +250,54 @@ def classify_2d(classify_arr, predict_arr):
     predicted_list = np.empty(shape=(8, 8), dtype=object)
     predicted_list.fill('em')
 
-    for classify, predict in zip(classify_arr, predict_arr):
-        predicted_list[classify[0]][classify[1]] = category_reference[predict]
+    try:
 
-    flipped_arr = np.fliplr(predicted_list)
+        for classify, predict in zip(classify_arr, predict_arr):
+            predicted_list[classify[0]][classify[1]] = category_reference[predict]
 
+        flipped_arr = np.fliplr(predicted_list)
 
-    return flipped_arr
+        return flipped_arr
+
+    except IndexError:
+        pass
 
 
 # classifies using python-chess object notation:
-
 def classify_object_notation(classify_arr, predict_arr):
     category_reference = {0: 'K', 1: 'Q', 2: 'B', 3: 'N', 4: 'R', 5: 'P', 6: 'k', 7: 'q', 8: 'b', 9: 'n',
                           10: 'r', 11: 'p', 12: '.'}
 
-    pred_list = np.empty(shape=(8, 8), dtype=object)
-    pred_list.fill('.')
+    prediction_list = np.empty(shape=(8, 8), dtype=object)
+    prediction_list.fill('.')
 
-    for classify, predict in zip(classify_arr, predict_arr):
-        pred_list[classify[0]][classify[1]] = category_reference[predict]
+    try:
 
-    flipped_arr = np.fliplr(pred_list)
-    # print("flipped_arr", flipped_arr)
+        for classify, predict in zip(classify_arr, predict_arr):
+            prediction_list[classify[0]][classify[1]] = category_reference[predict]
 
-    row1 = flipped_arr[0]
-    row1 = (','.join(row1))  # remove commas
-    row1 = row1.replace(',', ' ')  # replace commas with space
-    row1 = str(row1)
+        flipped_arr = np.fliplr(prediction_list)
 
-    new_arr = []
+        new_arr = []
 
-    for row in flipped_arr:
-        new_row = (','.join(row)).replace(',', ' ')
-        new_arr.append(new_row)
+        for row in flipped_arr:
+            new_row = (','.join(row)).replace(',', ' ')
+            new_arr.append(new_row)
 
-    # print(new_arr)
-    # print("row1", row1)
-    return new_arr
+        return new_arr
+    except IndexError:
+        pass
 
 
 def get_uci(board1, board2, who_moved):
     nums = {1: "a", 2: "b", 3: "c", 4: "d", 5: "e", 6: "f", 7: "g", 8: "h"}
     str_board = str(board1).split("\n")
-    # print("strboard split", str_board )
-    # print("strboard split2", board2)
     move = ""
     flip = False
+
     if who_moved:  # If true then it's white's turn
         for i in range(8)[::-1]:
             for x in range(15)[::-1]:
-                # print("strboard1", str_board[i][x])
-                # print("strboard2", board2[i][x] )
                 if str_board[i][x] != board2[i][x]:
                     if str_board[i][x] == "." and move == "":
                         flip = True
@@ -311,8 +311,8 @@ def get_uci(board1, board2, who_moved):
                     move += str(nums.get(round(x / 2) + 1)) + str(9 - (i + 1))
     if flip:
         move = move[2] + move[3] + move[0] + move[1]
-    #print("WHO MOVED:", who_moved)
-    #print("MOVE: ", move)
+
+    # Checks if a move is castling:
     if move == 'h1g1f1e1':
         # return 'h1g1'
         return 'e1g1'
@@ -321,7 +321,7 @@ def get_uci(board1, board2, who_moved):
     elif move == 'e1d1c1a1':
         return 'e1c1'
         # return 'e1c1'
-    elif move == 'e8d8c8a8':
+    elif move == 'a8c8d8e8':
         return 'e8c8'
     return move
 
