@@ -192,7 +192,7 @@ while True:
         warped_img = warp_transform(cropped_image, transform)
 
         # draw points on the warped image
-        draw_boundary_warp(warped_img, boundary_points_transform)
+        #draw_boundary_warp(warped_img, boundary_points_transform)
 
         # add each midpoint to a 8x8 matrix to determine its location on the board
         classify_arr = classify_squares(51.5, boundary_points_transform)
