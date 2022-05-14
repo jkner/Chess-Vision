@@ -1,4 +1,4 @@
-# ** Chess-Vision**
+# **Chess-Vision**
 
 The goal of this project is to convert a video of a live chess game to a pgn file.
 
