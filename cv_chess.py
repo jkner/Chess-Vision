@@ -124,6 +124,7 @@ cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 # Show the starting board either as blank or with the initial setup
 start = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 
+# Boards used for move detection and PGN Generation
 new_board = chess.Board()
 board = chess.Board()
 
@@ -142,6 +143,28 @@ move_arr = []
 
 # Create a new PGN File:
 new_pgn = open("./pgn/unix-" + str(now) + ".pgn", "x")
+
+# PGN Header
+event = input("Enter the event name: ")
+site = input("Enter the site of the event: ")
+#pgndate = input("Enter the date: ")
+round = input("Enter the round: ")
+playerwhite = input("Enter the name of the player of the white pieces: ")
+playerblack = input("Enter the name of the player of the black pieces: ")
+#String
+eventString = "[Event \"" + event + "\"]"
+siteString = "\n[Site \"" + site + "\"]"
+pgndateString = "\n[Date \"" + str(today) + "\"]"
+roundString = "\n[Round \"" + round + "\"]"
+playerwhiteString = "\n[White \"" + playerwhite + "\"]"
+playerblackString = "\n[Black \"" + playerblack + "\"]\n"
+#Output to file
+new_pgn.write(eventString)
+new_pgn.write(siteString)
+new_pgn.write(pgndateString)
+new_pgn.write(roundString)
+new_pgn.write(playerwhiteString)
+new_pgn.write(playerblackString)
 
 # Run detection
 print("Running Detection....")
@@ -202,12 +225,20 @@ while True:
 
                 # if it is checkmate, end the game
                 if board.is_checkmate():
-                    new_pgn.write(new_board.variation_san([chess.Move.from_uci(m) for m in move_arr]))
-                    new_pgn.close()
+                    if board.outcome():
+                        new_pgn.write('[Result "1-0"]\n')
+                        new_pgn.write(new_board.variation_san([chess.Move.from_uci(m) for m in move_arr]))
+                        new_pgn.close()
+                    else:
+                        new_pgn.write('[Result "0-1"]\n')
+                        new_pgn.write(new_board.variation_san([chess.Move.from_uci(m) for m in move_arr]))
+                        new_pgn.close()
+
                     break
 
                 # if it is stalemate, end the game
                 if board.is_stalemate():
+                    new_pgn.write('[Result "1/2-1/2"]')
                     new_pgn.write(new_board.variation_san([chess.Move.from_uci(m) for m in move_arr]))
                     new_pgn.close()
                     break

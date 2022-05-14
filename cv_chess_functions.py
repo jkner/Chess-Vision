@@ -124,7 +124,7 @@ def remove_outside_points(list_of_points):
 
 
 def crop_image(img):
-    cropped_img = img[15:1000, 65:590]  # TODO: replace with actual points from the board later
+    cropped_img = img[15:1000, 65:590]
 
     return cropped_img
 
@@ -133,7 +133,6 @@ def trans_boxes(img, boxes):
     new_arr = []
     for i in range(len(boxes)):
         x1y1 = (boxes[i][0:2] * img.shape[0:2][::-1]).astype(np.int)
-        # print("X1Y1:", x1y1)
         x2y2 = (boxes[i][2:4] * img.shape[0:2][::-1]).astype(np.int)
         new_arr.append(x1y1)
         new_arr.append(x2y2)
@@ -142,11 +141,6 @@ def trans_boxes(img, boxes):
 
 
 def mid_point(arr):
-    # print("point 1", arr[0][0])
-    # print("point 1", arr[1][0])
-    # (arr[1][0] - arr[0][0])/2 # x values
-    # arr[1][1] - (arr[1][1] - arr[0][1])/3
-
     midpoint_list = list()
 
     for i in range(0, len(arr), 2):
@@ -154,9 +148,7 @@ def mid_point(arr):
         y = arr[i + 1][1] - (arr[i + 1][1] - arr[i][1]) // 3
         midpoint = [x, y]
         midpoint_list.append(midpoint)
-        # print("midpoint list", midpoint_list)
 
-    # print("midpoint list", midpoint_list)
     return midpoint_list
 
 
