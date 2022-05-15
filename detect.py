@@ -8,6 +8,7 @@ from utils.preprocess import resize_img
 import random
 import albumentations as A
 import sys
+from itertools import groupby
 
 
 def parse_args(args):
@@ -118,23 +119,69 @@ def main(model):
         class_names = f.read().splitlines()
     img_list = os.listdir(args.pic_dir)
 
+    i = 0
+    confidence_for_all = 0
+    d = dict()
+
     for img_name in img_list:
         img = cv2.imread(os.path.join(args.pic_dir, img_name))
         img_ori, _, _ = resize_img(img, args.img_size)
         img_copy = img_ori.copy()
         aug_img = []
+
         if args.TTA:
             tta_transforms = get_tta_transform()
             aug_img.append(tta_transforms[0](image=img_copy)['image'])
             aug_img.append(tta_transforms[1](image=img_copy)['image'])
         aug_img.append(img_copy)
         batch_img = np.array(aug_img)
+
         boxes, scores, classes, valid_detections = detect_batch_img(batch_img, model, args)
         boxes, scores, classes = tta_nms(boxes, scores, classes, valid_detections, args)
+
+        total_confidence = 0
+        for val in scores:
+            total_confidence += val
+
+        # Count each pieces on array:
+
+        for k, v in groupby(classes):
+            d.setdefault(k, []).append(len(list(v)))
+
         #print(boxes)
         #print("Scores: ", scores)
         #print(classes)
         plot_boxes(img_copy, boxes, scores, classes, class_names, args)
         cv2.imshow("Detection Image", img_copy/255)
         #cv2.imwrite("./images/board_images/detection.jpeg", img_copy/255)
+
         return classes, boxes, img
+
+    # white - king
+    # white - queen
+    # white - bishop
+    # white - knight
+    # white - rook
+    # white - pawn
+    # black - king
+    # black - queen
+    # black - bishop
+    # black - knight
+    # black - rook
+    # black - pawn
+
+    print("Num of WK", np.sum(d.get(0)))
+    print("Num of WQ", np.sum(d.get(1)))
+    print("Num of WB", np.sum(d.get(2)))
+    print("Num of WN", np.sum(d.get(3)))
+    print("Num of WR", np.sum(d.get(4)))
+    print("Num of WP", np.sum(d.get(5)))
+    print("Num of BK", np.sum(d.get(6)))
+    print("Num of BQ", np.sum(d.get(7)))
+    print("Num of BB", np.sum(d.get(8)))
+    print("Num of BN", np.sum(d.get(9)))
+    print("Num of BR", np.sum(d.get(10)))
+    print("Num of BP", np.sum(d.get(11)))
+
+    confidence_for_all_avg = confidence_for_all/i
+    print("Confidence_for_all", confidence_for_all_avg)

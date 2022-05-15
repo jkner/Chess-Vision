@@ -177,9 +177,6 @@ def classify_squares(size, midpoint):
 
         classify_arr.append([int(square_x), int(square_y)])
 
-        # print("square x", square_x, "square_y", square_y)
-
-    # print("classify arr", classify_arr)
     return classify_arr
 
 
