@@ -148,14 +148,12 @@ def main(model):
         for k, v in groupby(classes):
             d.setdefault(k, []).append(len(list(v)))
 
-        #print(boxes)
-        #print("Scores: ", scores)
-        #print(classes)
+        # print(boxes)
+        # print("Scores: ", scores)
+        # print(classes)
         plot_boxes(img_copy, boxes, scores, classes, class_names, args)
-        cv2.imshow("Detection Image", img_copy/255)
-        #cv2.imwrite("./images/board_images/detection.jpeg", img_copy/255)
-
-        return classes, boxes, img
+        cv2.imshow("Detection Image", img_copy / 255)
+        # cv2.imwrite("./images/board_images/detection.jpeg", img_copy/255)
 
     # white - king
     # white - queen
@@ -183,5 +181,10 @@ def main(model):
     print("Num of BR", np.sum(d.get(10)))
     print("Num of BP", np.sum(d.get(11)))
 
-    confidence_for_all_avg = confidence_for_all/i
+    if i != 0:
+        confidence_for_all_avg = confidence_for_all / i
+    else:
+        confidence_for_all_avg = confidence_for_all
     print("Confidence_for_all", confidence_for_all_avg)
+
+    return classes, boxes, img
