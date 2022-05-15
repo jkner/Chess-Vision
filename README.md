@@ -49,6 +49,7 @@ python3 cv_chess.py
 ## Detection Result
 ![Chess-Vision](https://github.com/jkner/Chess-Vision/blob/main/images/board_images/detected_board.png?raw=true)
 
+### Video Demo
 [![Chess-Vision](https://img.youtube.com/vi/Nw5VhdQbd-M/0.jpg)](https://www.youtube.com/watch?v=Nw5VhdQbd-M)
 
 ## References
