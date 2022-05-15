@@ -37,7 +37,7 @@ ScaledYOLOv4_tiny_detection_result:
 | model                                             | Chess Pieces |
 |--------------------------------------|----------------|   
 | Scaled-YoloV4-tiny(Multi-Scale)    |        0.995      |        
-
+| Scaled-YoloV4-tiny(Single-Scale)    |        0.989      | 
 ## Detection
 
 To run the code:
