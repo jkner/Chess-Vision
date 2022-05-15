@@ -47,7 +47,9 @@ python3 cv_chess.py
 ```
 
 ## Detection Result
-![alt text](https://github.com/jkner/Chess-Vision/blob/main/images/board_images/detected_board.png?raw=true)
+![Chess-Vision](https://github.com/jkner/Chess-Vision/blob/main/images/board_images/detected_board.png?raw=true)
+
+[![Chess-Vision](https://img.youtube.com/vi/Nw5VhdQbd-M)](https://www.youtube.com/watch?v=Nw5VhdQbd-M)
 
 ## References
 
