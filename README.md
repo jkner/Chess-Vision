@@ -14,17 +14,28 @@ ScaledYOLOv4_tiny_detection_result:
     git clone https://github.com/jkner/Chess-Vision.git
     ```
     
+2. Install Anaconda:
+    
+    ```jsx
+    https://www.anaconda.com/
+    ```
 
-1. Install Tensor flow:
+3. Install pip:
+
+    ```jsx
+    conda update --all
+    conda install pip
+    ```
+4. Create an environment, activate it then install tensorflow-gpu:
     
     [Tensorflow Gpu :: Anaconda.org](https://anaconda.org/anaconda/tensorflow-gpu)
     
 
     ```jsx
-    conda install -c anaconda tensorflow-gpu
+    conda install tensorflow-gpu
     ```
 
-1. Install requirements:
+5. Install requirements:
 
     ```jsx
     pip install -r requirements.txt
